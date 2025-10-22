@@ -4,6 +4,7 @@
 *.BIN
 data/*.*
 /.vscode
+/.idea
 /build
 __pycache__
 dist
