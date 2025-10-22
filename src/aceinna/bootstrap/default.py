@@ -18,7 +18,8 @@ from ..framework.context import APP_CONTEXT
 
 
 class Default:
-    '''Default entry class
+    '''
+    Default entry class
     '''
     options = None
     _tunnel = None

@@ -11,11 +11,13 @@ from .. import VERSION
 from ..framework.constants import APP_TYPE
 
 class Loader:
-    '''Bootstrap Factory
+    '''
+    Bootstrap Factory
     '''
     @staticmethod
     def create(platform, options):
-        '''Initial bootstrap instance
+        '''
+        Initial bootstrap instance
         '''
         print("[Info] Aceinna Navigation CLI, version {0} ".format(VERSION))
 

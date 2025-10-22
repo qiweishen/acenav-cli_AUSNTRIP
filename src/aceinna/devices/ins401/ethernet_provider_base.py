@@ -195,11 +195,11 @@ class Provider_base(OpenDeviceBase):
             self.app_info = {
                 'version': 'bootloader'
             }
-            
+
             return
 
         app_version = text
-        
+
         split_text = app_version.split(' ')
         app_name = next((item for item in APP_STR if item in split_text), None)
 
@@ -238,7 +238,7 @@ class Provider_base(OpenDeviceBase):
                 'Failed to extract app version information from unit.'
             )
 
-    def ntrip_client_thread(self): 
+    def ntrip_client_thread(self):
         self.ntrip_client = NTRIPClient(self.properties)
         self.ntrip_client.on('parsed', self.handle_rtcm_data_parsed)
         if self.device_info.__contains__('sn') and self.device_info.__contains__('pn'):
@@ -295,7 +295,7 @@ class Provider_base(OpenDeviceBase):
 
                 # check saved result
                 self.check_predefined_result()
-        
+
             if set_mount_angle:
                 self.set_mount_angle()
                 self.prepare_lib_folder()
@@ -305,7 +305,7 @@ class Provider_base(OpenDeviceBase):
                 if result['packetType'] == 'success':
                     #print('data = ',bytes(result['data']))
                     self.ins_save_logf.write(bytes(result['raw_data']))
-                    self.ins_save_logf.flush() 
+                    self.ins_save_logf.flush()
                 else:
                     print('can\'t get ins save message')
             if self.cli_options.debug == 'true':
@@ -346,10 +346,10 @@ class Provider_base(OpenDeviceBase):
     def on_read_raw(self, data):
         if data[0] != 0x24 or data[1] != 0x47:
             return
-        
+
         temp_str_nmea = data.decode('utf-8')
         if (temp_str_nmea.find("\r\n", len(temp_str_nmea)-2, len(temp_str_nmea)) != -1):
-            str_nmea = temp_str_nmea 
+            str_nmea = temp_str_nmea
         else:
             result = temp_str_nmea.find("\r\n", GNZDA_DATA_LEN-10, GNZDA_DATA_LEN)
             if result != -1:
@@ -365,7 +365,7 @@ class Provider_base(OpenDeviceBase):
                         self.ntrip_client.send(str_nmea)
                 if self.user_logf:
                     self.user_logf.write(data)
-            
+
             APP_CONTEXT.get_print_logger().info(str_nmea[0:len(str_nmea) - 2])
         except Exception as e:
             print('NMEA fault:{0}'.format(e))
@@ -386,7 +386,7 @@ class Provider_base(OpenDeviceBase):
         self.ethernet_rtcm_data_logger = EthernetRTCMDataLogger(
             self.properties, self.communicator, self.rtcm_logf)
         self.ethernet_rtcm_data_logger.run()
-        
+
     def set_mountangle_config(self, result = []):
         '''
         set_mountangle_config
@@ -467,19 +467,19 @@ class Provider_base(OpenDeviceBase):
                 + format(data[5], '16') + "\n"
 
             self.f_process.write('$GPODO,' + buffer)
-        
+
         elif type == b'\x05\n':
             pass
 
         elif type == b'\x06\n': # rover rtcm
             pass
-        
+
         elif type == b'\x07\n': # corr imu
             pass
 
-    def mountangle_parse_thread(self):       
+    def mountangle_parse_thread(self):
         print('processing {0}\n'.format(self.ins401_log_file_path))
-        
+
         path = mkdir(self.ins401_log_file_path)
 
         temp_file_path, temp_fname = os.path.split(self.ins401_log_file_path)
@@ -493,14 +493,14 @@ class Provider_base(OpenDeviceBase):
         while True:
             if self._message_center._is_stop:
                 time.sleep(1)
-                continue 
+                continue
 
             if self.mountangle.out_result_flag:
                 rvb = []
                 for i in range(3):
                     f = self.big_mountangle_rvb[i] -self.mountangle.mountangle_estimate_result[i]
                     rvb.append(float('%.4f'% f))
-                
+
                 self.set_mountangle_config(rvb)
                 time.sleep(2)
                 self.save_device_info()
@@ -509,7 +509,7 @@ class Provider_base(OpenDeviceBase):
                 os._exit(1)
 
             time.sleep(5)
-  
+
     def start_mountangle_parse(self):
         if self.ins401_log_file_path and self.mountangle_thread is None:
             self.mountangle_thread = threading.Thread(target=self.mountangle_parse_thread)
@@ -543,7 +543,7 @@ class Provider_base(OpenDeviceBase):
             time.sleep(0.2)
             response = helper.read_untils_have_data(
                 self.communicator, [0x01, 0xcc], 10, 1000)
-            if response:           
+            if response:
                 break
         if response:
             text = helper.format_string(response)
@@ -560,7 +560,7 @@ class Provider_base(OpenDeviceBase):
                         self.bootloader_version = split_text[3]
         else:
             os._exit(1)
-           
+
 
     def do_reshake(self):
         '''
@@ -584,7 +584,7 @@ class Provider_base(OpenDeviceBase):
                 message_bytes.extend([ord('r'), ord('t'), ord('k')])
             elif core == '1':
                 message_bytes.extend([ord('i'), ord('n'), ord('s')])
-        
+
         self.communicator.reset_buffer()
         if ack_enable:
             for i in range(3):
@@ -599,7 +599,7 @@ class Provider_base(OpenDeviceBase):
                 result = helper.read_untils_have_data(
                     self.communicator, command_CS, 100, 200)
 
-                if result:     
+                if result:
                     break
             if result is None:
                 print('send cs command failed, core:{0}'.format(ord(core)))
@@ -648,7 +648,7 @@ class Provider_base(OpenDeviceBase):
             self.communicator.get_src_mac(),
             command_SR, message_bytes)
         command.packet_type = [0xcc, 0x06]
-        
+
         for _ in range(3):
             self.communicator.write(command.actual_command)
             time.sleep(0.2)
@@ -662,7 +662,7 @@ class Provider_base(OpenDeviceBase):
             self.communicator.get_src_mac(),
             command_SR, message_bytes)
         command.packet_type = [0xaa, 0x02]
-        
+
         for _ in range(3):
             self.communicator.write(command.actual_command)
             time.sleep(0.2)
@@ -705,13 +705,13 @@ class Provider_base(OpenDeviceBase):
             if self.bootloader_version:
                 if self.bootloader_version >= '01.02':
                     result = True
-                else:                     
+                else:
                     result = False
             else:
                 result = False
         else:
             result = True
-                            
+
         return result
 
     def get_erase_time(self, erase_len):
@@ -728,7 +728,7 @@ class Provider_base(OpenDeviceBase):
             packet_len = 960
         else:
             packet_len = 192
-        
+
         erase_len = len(content)
         erase_time = self.get_erase_time(erase_len)
         ethernet_ack_enable = self.get_unit_ethernet_ack_flag()
@@ -797,7 +797,7 @@ class Provider_base(OpenDeviceBase):
                 imu_boot_upgrade_worker.on(
                     UPGRADE_EVENT.FIRST_PACKET, lambda: time.sleep(8))
                 return imu_boot_upgrade_worker
-                
+
         if self.imu_upgrade_flag:
             if rule == 'imu':
                 ethernet_ack_enable = True
@@ -813,7 +813,7 @@ class Provider_base(OpenDeviceBase):
                 imu_upgrade_worker.on(
                     UPGRADE_EVENT.FIRST_PACKET, lambda: time.sleep(8))
                 return imu_upgrade_worker
-                
+
     def get_upgrade_workers(self, firmware_content):
         workers = []
 
@@ -850,29 +850,29 @@ class Provider_base(OpenDeviceBase):
             if rule == 'rtk':
                 rtk_len = len(content) & 0xFFFF
                 self.rtk_crc = helper.calc_crc(content[0:rtk_len])
-            
+
             if rule == 'ins':
                 ins_len = len(content) & 0xFFFF
                 self.ins_crc = helper.calc_crc(content[0:ins_len])
-            
+
             if rule == 'sdk':
                 if self.sdk_upgrade_flag:
                     worker = self.build_worker(rule, content)
                     if worker:
                         workers.append(worker)
-                    
-                if self.sdk_2_upgrade_flag:           
+
+                if self.sdk_2_upgrade_flag:
                     worker = self.build_worker('sdk_2', content)
                     if worker:
                         workers.append(worker)
-                
+
             else:
                 worker = self.build_worker(rule, content)
                 if not worker:
                     continue
 
                 workers.append(worker)
-                        
+
 
         # wrap rtk and ins
         start_index = -1
@@ -1058,7 +1058,7 @@ class Provider_base(OpenDeviceBase):
 
         if self.is_in_bootloader:
             return
-        
+
         result = self.get_params()
 
         device_configuration = None
@@ -1104,7 +1104,7 @@ class Provider_base(OpenDeviceBase):
             and not self.ntrip_client \
             and not self.is_in_bootloader:
             threading.Thread(target=self.ntrip_client_thread).start()
-        
+
         self.loop_upgrade_flag = False
         pass
 
@@ -1339,7 +1339,7 @@ class Provider_base(OpenDeviceBase):
             yield {'packetType': 'error', 'data': {'error': error}, 'raw_data': {'error': error}}
 
         yield {'packetType': 'success', 'data': data, 'raw_data': raw_data}
-    
+
     @with_device_message
     def set_unit_sn_message(self):
         command_sn = b'\x01\xfc'
@@ -1381,16 +1381,16 @@ class Provider_base(OpenDeviceBase):
 
         if isinstance(params[1], dict):
             file = params[1]['file']
-        
+
         self.rtk_upgrade_flag = False
         self.ins_upgrade_flag = False
         self.sdk_upgrade_flag = False
         self.imu_upgrade_flag = False
         self.imu_boot_upgrade_flag = False
 
-        if len(params) > 2: 
+        if len(params) > 2:
             # rtk ins sdk imu  each upgrade
-            for param in params:   
+            for param in params:
                 if param == 'rtk':
                     self.rtk_upgrade_flag = True
 
@@ -1398,16 +1398,16 @@ class Provider_base(OpenDeviceBase):
                     self.ins_upgrade_flag = True
 
                 if param == 'sdk':
-                    self.sdk_upgrade_flag = True 
+                    self.sdk_upgrade_flag = True
 
                 if param == 'imu_boot':
-                    self.imu_boot_upgrade_flag = True 
+                    self.imu_boot_upgrade_flag = True
 
                 if param == 'imu':
                     self.imu_upgrade_flag = True
 
-        elif len(params) == 2:    
-            # rtk ins sdk imu upgrade, the imu boot upgrade depends on 
+        elif len(params) == 2:
+            # rtk ins sdk imu upgrade, the imu boot upgrade depends on
             # whether the imu boot is merged into the firmware
             self.rtk_upgrade_flag = True
             self.ins_upgrade_flag = True
@@ -1442,7 +1442,7 @@ class Provider_base(OpenDeviceBase):
             yield {'packetType': 'error', 'data': {'error': error}}
 
         yield {'packetType': 'success', 'data': data}
-    
+
     def prepare_lib_folder(self):
         executor_path = resource.get_executor_path()
         lib_folder_name = 'libs'
@@ -1480,7 +1480,7 @@ class Provider_base(OpenDeviceBase):
 
             with open(INS_lib_path, "wb") as code:
                 code.write(lib_content)
-        
+
         if DR_lib_path and INS_lib_path:
             return True
 

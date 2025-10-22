@@ -19,7 +19,8 @@ IS_LATER_PY_38 = sys.version_info > (3, 8)
 
 
 def kill_app(signal_int, call_back):
-    '''Kill main thread
+    '''
+    Kill main thread
     '''
     os.kill(os.getpid(), signal.SIGTERM)
 

@@ -1,4 +1,5 @@
 from socket import *
+import ssl
 import concurrent.futures as futures
 import time
 import base64
@@ -20,18 +21,24 @@ class NTRIPClient(EventBase):
         self.tcp_client_socket = None
         self.is_close = False
         self.append_header_string= None
+        self.use_ssl = False
 
         for x in properties["initial"]["ntrip"]:
             if x['name'] == 'ip':
                 self.ip = x["value"]
             elif x['name'] == 'port':
                 self.port = x["value"]
+                # Auto-detect SSL based on port
+                if self.port == 443:
+                    self.use_ssl = True
             elif x['name'] == 'mountPoint':
                 self.mountPoint = x["value"]
             elif x['name'] == 'username':
                 self.username = x["value"]
             elif x['name'] == 'password':
                 self.password = x["value"]
+            elif x['name'] == 'ssl':
+                self.use_ssl = x["value"]
 
     def run(self):
         APP_CONTEXT.get_print_logger().info('NTRIP run..')
@@ -74,14 +81,27 @@ class NTRIPClient(EventBase):
 
     def doConnect(self):
         self.is_connected = 0
-        self.tcp_client_socket = socket(AF_INET, SOCK_STREAM)
-        try:
-            print_helper.print_on_console('NTRIP:[connect] {0}:{1} start...'.format(
-                self.ip, self.port))
-            APP_CONTEXT.get_print_logger().info(
-                'NTRIP:[connect] {0}:{1} start...'.format(self.ip, self.port))
+        raw_socket = socket(AF_INET, SOCK_STREAM)
 
-            self.tcp_client_socket.connect((self.ip, self.port))
+        try:
+            ssl_status = " (SSL/TLS)" if self.use_ssl else ""
+            print_helper.print_on_console('NTRIP:[connect] {0}:{1}{2} start...'.format(
+                self.ip, self.port, ssl_status))
+            APP_CONTEXT.get_print_logger().info(
+                'NTRIP:[connect] {0}:{1}{2} start...'.format(self.ip, self.port, ssl_status))
+
+            raw_socket.connect((self.ip, self.port))
+
+            # Wrap socket with SSL/TLS if needed
+            if self.use_ssl:
+                context = ssl.create_default_context()
+                # Use system's default CA certificates (includes Amazon Root CA)
+                self.tcp_client_socket = context.wrap_socket(raw_socket, server_hostname=self.ip)
+                print_helper.print_on_console('NTRIP:[connect] SSL/TLS handshake completed')
+                APP_CONTEXT.get_print_logger().info('NTRIP:[connect] SSL/TLS handshake completed')
+            else:
+                self.tcp_client_socket = raw_socket
+
             print_helper.print_on_console('NTRIP:[connect] ok')
             APP_CONTEXT.get_print_logger().info('NTRIP:[connect] ok')
 
@@ -90,10 +110,13 @@ class NTRIPClient(EventBase):
             print_helper.print_on_console('NTRIP:[connect] {0}'.format(e))
             APP_CONTEXT.get_print_logger().info(
                 'NTRIP:[connect] {0}'.format(e))
+            if raw_socket:
+                raw_socket.close()
 
         if self.is_connected == 1:
             # send ntrip request
             ntripRequestStr = 'GET /' + self.mountPoint + ' HTTP/1.1\r\n'
+            ntripRequestStr += 'Host: ' + self.ip + '\r\n'
             ntripRequestStr += 'User-Agent: NTRIP PythonDriver/0.1\r\n'
 
             if self.append_header_string:
@@ -148,7 +171,7 @@ class NTRIPClient(EventBase):
                 return
 
     def recvResponse(self):
-        self.tcp_client_socket.settimeout(3)
+        self.tcp_client_socket.settimeout(10)
         while True:
             try:
                 data = self.tcp_client_socket.recv(1024)
